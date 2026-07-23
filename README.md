@@ -1,19 +1,27 @@
 # Chess Move Bot
 
-A modern chess analysis bot with a GUI, based on the Stockfish engine (GPLv3).
+A modern chess analysis bot with a clean Tkinter GUI, powered by the Stockfish engine (GPLv3).  
+It highlights the best three moves, shows shared origins and destinations with split borders/dots, and provides a smooth, time‑based analysis experience.
+
+---
 
 ## 🧠 Features
-- Best move (green)
-- Second-best move (orange)
-- Third-best move (red)
-- Split borders for identical pieces
-- Split points for identical target squares
-- Promotion dialog
-- Undo function
-- Smooth engine performance (time-based analysis)
-- Clean Tkinter GUI
 
-## ⚙️ Installation
+- **Best Move** highlighted in green  
+- **Second Best Move** highlighted in orange  
+- **Third Best Move** highlighted in red  
+- **Split borders** when multiple moves originate from the same square  
+- **Split dots** when multiple moves target the same square  
+- **Promotion dialog** (Queen, Rook, Bishop, Knight)  
+- **Undo function**  
+- **Smooth engine analysis** (time‑based, no stuttering)  
+- **Clean Tkinter GUI**  
+- **Supports flipping the board (top/bottom start)**  
+
+---
+
+## ⚙️ Installation (Source Version)
+
 ```bash
 pip install -r requirements.txt
 python src/chess_bot.py
