@@ -1,0 +1,373 @@
+import tkinter as tk
+from tkinter import messagebox, simpledialog
+import chess
+import chess.engine
+
+# >>> YOUR STOCKFISH PATH <<<
+STOCKFISH_PATH = r"C:   "
+
+BOARD_COLOR_LIGHT = "#3b4b7c"
+BOARD_COLOR_DARK = "#25254a"
+
+BEST_COLOR = "#00ff00"      # green
+SECOND_COLOR = "#ffa500"    # orange
+THIRD_COLOR = "#ff4040"     # red
+
+HIGHLIGHT_COLOR = "#5fd0ff"
+
+PIECE_COLORS = {"w": "#ffffff", "b": "#00ff7f"}
+PIECE_UNICODE = {
+    chess.PAWN: "♙", chess.KNIGHT: "♘", chess.BISHOP: "♗",
+    chess.ROOK: "♖", chess.QUEEN: "♕", chess.KING: "♔"
+}
+
+
+class PromotionDialog(simpledialog.Dialog):
+    def body(self, master):
+        tk.Label(master, text="Promote to which piece?", font=("Arial", 12)).pack()
+        self.choice = None
+
+        def set_choice(c):
+            self.choice = c
+            self.ok()
+
+        tk.Button(master, text="Queen", width=10, command=lambda: set_choice(chess.QUEEN)).pack(pady=2)
+        tk.Button(master, text="Rook", width=10, command=lambda: set_choice(chess.ROOK)).pack(pady=2)
+        tk.Button(master, text="Bishop", width=10, command=lambda: set_choice(chess.BISHOP)).pack(pady=2)
+        tk.Button(master, text="Knight", width=10, command=lambda: set_choice(chess.KNIGHT)).pack(pady=2)
+
+        return None
+
+    def apply(self):
+        pass
+
+
+class ChessGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Chess Move Bot")
+        self.root.configure(bg="#1e1e2f")
+
+        try:
+            self.engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+        except Exception as e:
+            messagebox.showerror("Error", f"Stockfish could not be started:\n{e}")
+            self.root.destroy()
+            return
+
+        self.board = chess.Board()
+        self.selected_square = None
+        self.white_bottom = True
+
+        self.best_moves = []  # best, second, third
+
+        self.history = []
+
+        self.info_label = tk.Label(
+            root,
+            text="Choose who starts (top or bottom).",
+            fg="white", bg="#1e1e2f",
+            font=("Arial", 12)
+        )
+        self.info_label.pack(fill="x")
+
+        main_frame = tk.Frame(root, bg="#1e1e2f")
+        main_frame.pack()
+
+        button_frame = tk.Frame(main_frame, bg="#1e1e2f")
+        button_frame.pack(side="left", padx=10, pady=10)
+
+        tk.Label(button_frame, text="Move Colors:", fg="white", bg="#1e1e2f", font=("Arial", 12, "bold")).pack()
+
+        tk.Label(button_frame, text="Best Move", fg=BEST_COLOR, bg="#1e1e2f", font=("Arial", 12)).pack()
+        tk.Label(button_frame, text="Second Best", fg=SECOND_COLOR, bg="#1e1e2f", font=("Arial", 12)).pack()
+        tk.Label(button_frame, text="Third Best", fg=THIRD_COLOR, bg="#1e1e2f", font=("Arial", 12)).pack()
+
+        self.btn_start_bottom = tk.Button(button_frame, text="Bottom starts", command=self.start_bottom)
+        self.btn_start_bottom.pack(pady=5)
+
+        self.btn_reset = tk.Button(button_frame, text="Reset", command=self.reset_board)
+        self.btn_reset.pack(pady=5)
+
+        self.btn_start_top = tk.Button(button_frame, text="Top starts", command=self.start_top)
+        self.btn_start_top.pack(pady=5)
+
+        self.btn_undo = tk.Button(button_frame, text="Undo", command=self.undo_move)
+        self.btn_undo.pack(pady=5)
+
+        board_frame = tk.Frame(main_frame, bg="#1e1e2f")
+        board_frame.pack(side="left", padx=10, pady=10)
+
+        self.canvas = tk.Canvas(board_frame, width=8*80, height=8*80, bg="#1e1e2f", highlightthickness=0)
+        self.canvas.pack()
+        self.canvas.bind("<Button-1>", self.on_click)
+
+        self.best_label = tk.Label(
+            root,
+            text="Best Moves: - | - | -",
+            fg="white", bg="#1e1e2f",
+            font=("Arial", 16, "bold")
+        )
+        self.best_label.pack(fill="x")
+
+        self.status_label = tk.Label(
+            root,
+            text="Ready.",
+            fg="white", bg="#1e1e2f",
+            font=("Arial", 14)
+        )
+        self.status_label.pack(fill="x")
+
+        self.draw_board()
+        self.draw_pieces()
+        self.update_best_moves()
+
+    def undo_move(self):
+        if not self.history:
+            return
+        self.board = self.history.pop()
+        self.selected_square = None
+        self.best_moves = []
+        self.update_best_moves()
+        self.draw_board()
+        self.draw_pieces()
+
+    def square_to_xy(self, square):
+        file = chess.square_file(square)
+        rank = chess.square_rank(square)
+        if self.white_bottom:
+            x = file * 80
+            y = (7 - rank) * 80
+        else:
+            x = (7 - file) * 80
+            y = rank * 80
+        return x, y
+
+    def xy_to_square(self, x, y):
+        if self.white_bottom:
+            file = x // 80
+            rank = 7 - (y // 80)
+        else:
+            file = 7 - (x // 80)
+            rank = y // 80
+        if 0 <= file <= 7 and 0 <= rank <= 7:
+            return chess.square(file, rank)
+        return None
+
+    def draw_board(self):
+        self.canvas.delete("square")
+        for rank in range(8):
+            for file in range(8):
+                if self.white_bottom:
+                    x1 = file * 80
+                    y1 = rank * 80
+                else:
+                    x1 = (7 - file) * 80
+                    y1 = (7 - rank) * 80
+                x2 = x1 + 80
+                y2 = y1 + 80
+                color = BOARD_COLOR_LIGHT if (file + rank) % 2 == 0 else BOARD_COLOR_DARK
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="", tags="square")
+
+    def draw_half_square_border(self, x, y, color_left, color_right, tag):
+        # left half border
+        self.canvas.create_line(x, y, x, y+80, fill=color_left, width=3, tags=tag)
+        self.canvas.create_line(x, y, x+40, y, fill=color_left, width=3, tags=tag)
+        self.canvas.create_line(x, y+80, x+40, y+80, fill=color_left, width=3, tags=tag)
+
+        # right half border
+        self.canvas.create_line(x+80, y, x+80, y+80, fill=color_right, width=3, tags=tag)
+        self.canvas.create_line(x+40, y, x+80, y, fill=color_right, width=3, tags=tag)
+        self.canvas.create_line(x+40, y+80, x+80, y+80, fill=color_right, width=3, tags=tag)
+
+    def draw_half_dot(self, x, y, color_left, color_right, tag):
+        # left half circle
+        self.canvas.create_arc(
+            x + 30, y + 30, x + 50, y + 50,
+            start=90, extent=180,
+            fill=color_left, outline="", tags=tag
+        )
+        # right half circle
+        self.canvas.create_arc(
+            x + 30, y + 30, x + 50, y + 50,
+            start=270, extent=180,
+            fill=color_right, outline="", tags=tag
+        )
+
+    def draw_pieces(self):
+        self.canvas.delete("piece")
+        self.canvas.delete("highlight")
+        self.canvas.delete("bestmove")
+        self.canvas.delete("secondmove")
+        self.canvas.delete("thirdmove")
+
+        # Draw pieces
+        for square in chess.SQUARES:
+            piece = self.board.piece_at(square)
+            if piece:
+                x, y = self.square_to_xy(square)
+                color = PIECE_COLORS["w" if piece.color == chess.WHITE else "b"]
+                text = PIECE_UNICODE.get(piece.piece_type, "?")
+                self.canvas.create_text(
+                    x + 40, y + 40,
+                    text=text, fill=color,
+                    font=("Segoe UI Symbol", 32, "bold"),
+                    tags="piece"
+                )
+
+        # Highlight selected square
+        if self.selected_square is not None:
+            x, y = self.square_to_xy(self.selected_square)
+            self.canvas.create_rectangle(
+                x, y, x + 80, y + 80,
+                outline=HIGHLIGHT_COLOR, width=3,
+                tags="highlight"
+            )
+
+        colors = [BEST_COLOR, SECOND_COLOR, THIRD_COLOR]
+        tags = ["bestmove", "secondmove", "thirdmove"]
+
+        # Check shared FROM squares
+        from_squares = {}
+        for idx, move in enumerate(self.best_moves):
+            fs = move.from_square
+            from_squares.setdefault(fs, []).append(idx)
+
+        # Check shared TO squares
+        to_squares = {}
+        for idx, move in enumerate(self.best_moves):
+            ts = move.to_square
+            to_squares.setdefault(ts, []).append(idx)
+
+        for idx, move in enumerate(self.best_moves):
+            fx, fy = self.square_to_xy(move.from_square)
+            tx, ty = self.square_to_xy(move.to_square)
+            tag = tags[idx]
+
+            # FROM square
+            if len(from_squares[move.from_square]) == 1:
+                self.canvas.create_rectangle(
+                    fx, fy, fx + 80, fy + 80,
+                    outline=colors[idx], width=3,
+                    tags=tag
+                )
+            else:
+                others = from_squares[move.from_square]
+                if len(others) == 2:
+                    a, b = others
+                    self.draw_half_square_border(fx, fy, colors[a], colors[b], tag)
+                elif len(others) == 3:
+                    self.draw_half_square_border(fx, fy, colors[0], colors[2], tag)
+
+            # TO square
+            if len(to_squares[move.to_square]) == 1:
+                self.canvas.create_oval(
+                    tx + 30, ty + 30,
+                    tx + 50, ty + 50,
+                    fill=colors[idx],
+                    outline="",
+                    tags=tag
+                )
+            else:
+                others = to_squares[move.to_square]
+                if len(others) == 2:
+                    a, b = others
+                    self.draw_half_dot(tx, ty, colors[a], colors[b], tag)
+                elif len(others) == 3:
+                    self.draw_half_dot(tx, ty, colors[0], colors[2], tag)
+
+    def on_click(self, event):
+        square = self.xy_to_square(event.x, event.y)
+        if square is None:
+            return
+
+        if self.selected_square is None:
+            piece = self.board.piece_at(square)
+            if piece is None:
+                return
+            self.selected_square = square
+        else:
+            move = chess.Move(self.selected_square, square)
+
+            if chess.square_rank(square) in [0, 7] and self.board.piece_at(self.selected_square).piece_type == chess.PAWN:
+                dialog = PromotionDialog(self.root)
+                promo = dialog.choice
+                if promo:
+                    move = chess.Move(self.selected_square, square, promotion=promo)
+
+            if move in self.board.legal_moves:
+                self.history.append(self.board.copy())
+                self.board.push(move)
+                self.selected_square = None
+                self.draw_board()
+                self.draw_pieces()
+                self.update_best_moves()
+            else:
+                self.selected_square = None
+
+        self.draw_board()
+        self.draw_pieces()
+
+    def get_top_moves(self, board, count=3):
+        try:
+            info = self.engine.analyse(
+                board,
+                chess.engine.Limit(time=0.15),
+                multipv=count
+            )
+            moves = []
+            for entry in info:
+                if "pv" in entry:
+                    moves.append(entry["pv"][0])
+            return moves
+        except Exception:
+            return []
+
+    def update_best_moves(self):
+        if self.board.is_game_over():
+            result = self.board.result()
+            self.best_label.config(text=f"Game over: {result}")
+            self.status_label.config(text="No more moves.")
+            self.best_moves = []
+            self.draw_pieces()
+            return
+
+        self.best_moves = self.get_top_moves(self.board, count=3)
+
+        names = [str(m) for m in self.best_moves]
+        while len(names) < 3:
+            names.append("-")
+
+        self.best_label.config(
+            text=f"Best Moves: {names[0]} | {names[1]} | {names[2]}"
+        )
+        self.status_label.config(
+            text=f"Current Best Move: {names[0]}"
+        )
+
+        self.draw_pieces()
+
+    def start_bottom(self):
+        self.white_bottom = True
+        self.reset_board()
+
+    def start_top(self):
+        self.white_bottom = False
+        self.reset_board()
+
+    def reset_board(self):
+        self.board = chess.Board()
+        self.selected_square = None
+        self.best_moves = []
+        self.history = []
+        self.draw_board()
+        self.draw_pieces()
+        self.best_label.config(text="Best Moves: - | - | -")
+        self.status_label.config(text="Ready.")
+        self.update_best_moves()
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ChessGUI(root)
+    root.mainloop()
