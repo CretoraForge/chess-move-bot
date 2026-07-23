@@ -371,3 +371,11 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = ChessGUI(root)
     root.mainloop()
+
+
+
+# Chess Move Bot
+# Copyright (C) 2026 CretoraForge
+# Dieses Programm verwendet die Stockfish‑Engine unter der GPLv3‑Lizenz.
+# Der Quellcode ist öffentlich verfügbar unter: https://github.com/CretoraForge/chess-move-bot
+# Lizenz: GNU General Public License v3.0 (GPLv3)
