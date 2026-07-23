@@ -1,17 +1,17 @@
 # Chess Move Bot
 
-Ein moderner Schach-Analyse-Bot mit GUI, basierend auf der Stockfish-Engine (GPLv3).
+A modern chess analysis bot with a GUI, based on the Stockfish engine (GPLv3).
 
-## 🧠 Funktionen
-- Best Move (grün)
-- Second Best Move (orange)
-- Third Best Move (rot)
-- Geteilte Ränder bei gleichen Figuren
-- Geteilte Punkte bei gleichen Ziel-Feldern
-- Promotion-Dialog
-- Undo-Funktion
-- Flüssige Engine (time-based Analyse)
-- Saubere Tkinter GUI
+## 🧠 Features
+- Best move (green)
+- Second-best move (orange)
+- Third-best move (red)
+- Split borders for identical pieces
+- Split points for identical target squares
+- Promotion dialog
+- Undo function
+- Smooth engine performance (time-based analysis)
+- Clean Tkinter GUI
 
 ## ⚙️ Installation
 ```bash
