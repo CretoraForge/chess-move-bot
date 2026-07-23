@@ -59,3 +59,15 @@ The GUI will open and you can start analyzing moves immediately.
 The executable version with installer is available here:
 
 👉 Gumroad: Coming soon
+
+
+
+
+## 🧾 License
+
+This project uses the Stockfish engine under the GNU General Public License v3.0 (GPLv3).
+The full source code is publicly available as required by the GPLv3.
+You can find the license file here: [LICENSE](./LICENSE)
+
+Stockfish is licensed under the GPLv3:
+https://stockfishchess.org
