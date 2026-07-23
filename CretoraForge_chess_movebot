@@ -376,6 +376,6 @@ if __name__ == "__main__":
 
 # Chess Move Bot
 # Copyright (C) 2026 CretoraForge
-# Dieses Programm verwendet die Stockfish‑Engine unter der GPLv3‑Lizenz.
-# Der Quellcode ist öffentlich verfügbar unter: https://github.com/CretoraForge/chess-move-bot
-# Lizenz: GNU General Public License v3.0 (GPLv3)
+# This program uses the Stockfish engine under the GPLv3 license.
+# The source code is publicly available at: https://github.com/CretoraForge/chess-move-bot
+# License: GNU General Public License v3.0 (GPLv3)
